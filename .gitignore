@@ -1,0 +1,6 @@
+//for node modules
+node_modules/
+//for env files
+.env
+//for log files
+logs
