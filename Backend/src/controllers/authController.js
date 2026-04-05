@@ -4,10 +4,21 @@ import asyncHandler from '../utils/asyncHandler.js';
 import generateToken from '../utils/generateToken.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 
+const isNonEmptyString = (value) =>
+    typeof value === "string" && value.trim() !== "";
+
+const isNullableString = (value) =>
+    value === undefined || value === null || typeof value === "string";
+
+const getInvalidStringFields = (fields) =>
+    fields
+        .filter(([, value, validator]) => !validator(value))
+        .map(([fieldName]) => fieldName);
+
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
         return sendError(res, "Email and password are required", 400);
     }
 
@@ -16,6 +27,8 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!user) {
         return sendError(res, "Invalid email or password", 401);
     }
+
+    const isPasswordMatched = await user.matchPassword(password);
 
     if (!isPasswordMatched) {
         return sendError(res, "Invalid email or password", 401);
@@ -71,8 +84,22 @@ const registerStudent = asyncHandler(async (req, res) => {
 
     const { name, email, password, phone, profileImage, classSection } = req.body;
 
-    if (!name || !email || !password) {
+    if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
         return sendError(res, "Name, Email and Password are required", 400);
+    }
+
+    const invalidFields = getInvalidStringFields([
+        ["phone", phone, isNullableString],
+        ["profileImage", profileImage, isNullableString],
+        ["classSection", classSection, isNullableString],
+    ]);
+
+    if (invalidFields.length > 0) {
+        return sendError(
+            res,
+            `${invalidFields.join(", ")} must be string values`,
+            400
+        );
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
@@ -87,7 +114,7 @@ const registerStudent = asyncHandler(async (req, res) => {
         password,
         phone: phone?.trim() || "",
         profileImage: profileImage?.trim() || "",
-        classSection: classSection.trim() || "",
+        classSection: classSection?.trim() || "",
         role: "student",
     });
     user.lastLogin = new Date();
@@ -115,7 +142,7 @@ const registerStudent = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
-    if (!currentPassword || !newPassword) {
+    if (!isNonEmptyString(currentPassword) || !isNonEmptyString(newPassword)) {
         return sendError(res, "Please fill all the required fields", 400);
     }
 
@@ -150,6 +177,24 @@ const changePassword = asyncHandler(async (req, res) => {
 const updateProfile = asyncHandler(async (req, res) => {
     const { name, phone, profileImage, classSection } = req.body;
 
+    if (name !== undefined && !isNonEmptyString(name)) {
+        return sendError(res, "Name must be a non-empty string", 400);
+    }
+
+    const invalidFields = getInvalidStringFields([
+        ["phone", phone, isNullableString],
+        ["profileImage", profileImage, isNullableString],
+        ["classSection", classSection, isNullableString],
+    ]);
+
+    if (invalidFields.length > 0) {
+        return sendError(
+            res,
+            `${invalidFields.join(", ")} must be string values`,
+            400
+        );
+    }
+
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -157,9 +202,9 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 
     if (name !== undefined) user.name = name.trim();
-    if (phone !== undefined) user.phone = phone.trim();
-    if (profileImage !== undefined) user.profileImage = profileImage.trim();
-    if (classSection !== undefined) user.classSection = classSection.trim();
+    if (phone !== undefined) user.phone = phone?.trim() || "";
+    if (profileImage !== undefined) user.profileImage = profileImage?.trim() || "";
+    if (classSection !== undefined) user.classSection = classSection?.trim() || "";
 
     const updatedUser = await user.save();
 
@@ -185,11 +230,32 @@ const updateProfile = asyncHandler(async (req, res) => {
 const createStaffOrAdmin = asyncHandler(async (req, res) => {
     const { name, email, password, role, phone, profileImage, classSection } = req.body;
 
-    if (!name || !email || !password || !role) {
+    if (
+        !isNonEmptyString(name) ||
+        !isNonEmptyString(email) ||
+        !isNonEmptyString(password) ||
+        !isNonEmptyString(role)
+    ) {
         return sendError(res, "Name, email, password, and role are required", 400);
     }
 
-    if (!["staff", "admin"].includes(role)) {
+    const invalidFields = getInvalidStringFields([
+        ["phone", phone, isNullableString],
+        ["profileImage", profileImage, isNullableString],
+        ["classSection", classSection, isNullableString],
+    ]);
+
+    if (invalidFields.length > 0) {
+        return sendError(
+            res,
+            `${invalidFields.join(", ")} must be string values`,
+            400
+        );
+    }
+
+    const normalizedRole = role.trim().toLowerCase();
+
+    if (!["staff", "admin"].includes(normalizedRole)) {
         return sendError(res, "Only staff or admin roles can be created here", 400);
     }
 
@@ -203,7 +269,7 @@ const createStaffOrAdmin = asyncHandler(async (req, res) => {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password,
-        role,
+        role: normalizedRole,
         phone: phone?.trim() || "",
         profileImage: profileImage?.trim() || "",
         classSection: classSection?.trim() || "",
@@ -211,7 +277,7 @@ const createStaffOrAdmin = asyncHandler(async (req, res) => {
 
     sendSuccess(
         res,
-        `${role} created successfully`,
+        `${normalizedRole} created successfully`,
         {
             _id: user._id,
             name: user.name,
@@ -238,7 +304,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
     if (isActive !== undefined) {
         filter.isActive = isActive === "true";
     }
-    const users = (await User.find(filter)).toSorted({ createdAt: -1 });
+    const users = await User.find(filter).sort({ createdAt: -1 });
     sendSuccess(res, "Users fetched successfully", users, 200);
 });
 

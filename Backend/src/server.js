@@ -5,7 +5,6 @@ import connectDB from "./config/db.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
-connectDB();
 
 const startServer = async () => {
     try {
@@ -18,3 +17,5 @@ const startServer = async () => {
         process.exit(1);
     }
 };
+
+startServer();
