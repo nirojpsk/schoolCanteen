@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
-// import menuItemRoutes from './routes/menuItemRoutes.js';
+import menuItemRoutes from './routes/menuItemRoutes.js';
 // import specialRoutes from './routes/specialRoutes.js';
 // import preorderRoutes from './routes/preorderRoutes.js';
 // import dashboardRoutes from './routes/dashboardRoutes.js';
@@ -45,7 +45,7 @@ app.use(cors({
 
 // Body Parsing Middleware
 
-app.use(express.json({limit: '10mb'})); // limit the size of incoming JSON payloads to 10mb
+app.use(express.json({ limit: '10mb' })); // limit the size of incoming JSON payloads to 10mb
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // yesle urlencoded data lai pani parse garna dincha, extended: true le nested objects lai pani support garcha. [urlencoded data vaneko form data ho, jasma key-value pairs huncha, jasto ki form submissions ma huncha] [nested objects vaneko chai, key-value pairs bhitra aru key-value pairs huncha, jasto ki { user: { name: 'John', age: 30 } }]
 app.use(cookieParser());
 
@@ -62,7 +62,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
-// app.use("/api/menu-items", menuItemRoutes);
+app.use("/api/menu-items", menuItemRoutes);
 // app.use("/api/specials", specialRoutes);
 // app.use("/api/preorders", preorderRoutes);
 // app.use("/api/dashboard", dashboardRoutes);
