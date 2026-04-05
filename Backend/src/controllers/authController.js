@@ -4,15 +4,17 @@ import asyncHandler from '../utils/asyncHandler.js';
 import generateToken from '../utils/generateToken.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 
-const isNonEmptyString = (value) =>
+
+const isNonEmptyString = (value) =>                //yesle chai check garxa ki value string ho ra empty chaina
     typeof value === "string" && value.trim() !== "";
 
-const isNullableString = (value) =>
+const isNullableString = (value) =>                //yesle chai check garxa ki value string ho ra empty pani huna sakxa or null/undefined ni huna sakxa
     value === undefined || value === null || typeof value === "string";
 
-const getInvalidStringFields = (fields) =>
+    //getinvalidstringfields function le chai array of fields linxa jasma field name, value and validator function hunxa, ra tesma filter garxa tyo fields lai jasma value chai validator function le fail garya xa, ra map garxa tyo filtered fields lai tyo field name ko array ma convert garna ko lagi, jasle chai hami lai invalid fields ko name ko array dinxa jasma value chai valid string chaina
+const getInvalidStringFields = (fields) =>    
     fields
-        .filter(([, value, validator]) => !validator(value))
+        .filter(([, value, validator]) => !validator(value)) //
         .map(([fieldName]) => fieldName);
 
 const loginUser = asyncHandler(async (req, res) => {

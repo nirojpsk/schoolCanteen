@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
-// import categoryRoutes from './routes/categoryRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 // import menuItemRoutes from './routes/menuItemRoutes.js';
 // import specialRoutes from './routes/specialRoutes.js';
 // import preorderRoutes from './routes/preorderRoutes.js';
@@ -61,7 +61,7 @@ app.get("/", (req, res) => {
 //API routes
 
 app.use("/api/auth", authRoutes);
-// app.use("/api/categories", categoryRoutes);
+app.use("/api/categories", categoryRoutes);
 // app.use("/api/menu-items", menuItemRoutes);
 // app.use("/api/specials", specialRoutes);
 // app.use("/api/preorders", preorderRoutes);
