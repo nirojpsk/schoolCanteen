@@ -9,7 +9,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import menuItemRoutes from './routes/menuItemsRoutes.js';
 import specialRoutes from './routes/specialRoutes.js';
 import preorderRoutes from './routes/preorderRoutes.js';
-// import dashboardRoutes from './routes/dashboardRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 
 
@@ -64,7 +64,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/menu-items", menuItemRoutes);
 app.use("/api/specials", specialRoutes);
 app.use("/api/preorders", preorderRoutes);
-// app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 //Error Handling Middleware
 

@@ -11,7 +11,7 @@ const getMenuItems = asyncHandler(async (req, res) => {
 
     const filter = {}; // yesle filter object banauxa jasma query parameters ko basis ma filtering criteria set garne
 
-    if (category) {
+    if (typeof category === "string" && category.trim()) {
         const foundCategory = await Category.findOne({ slug: category.trim().toLowerCase() });
 
         if (!foundCategory) {
@@ -20,7 +20,7 @@ const getMenuItems = asyncHandler(async (req, res) => {
         filter.category = foundCategory._id; // yesle filter object ma category field set garne
     }
 
-    if (search) {
+    if (typeof search === "string" && search.trim()) {
         filter.name = { $regex: search.trim(), $options: "i" }; // yesle filter object ma name field set garne jasma regex use garera search term match garne
         // $options: "i" le case-insensitive search garne
         //regex le search term lai pattern ma convert garne jasma "i" option le case-insensitive search garne
@@ -65,18 +65,6 @@ const createMenuItem = asyncHandler(async (req, res) => {
         isVeg,
         preparationTime,
     } = req.body;
-
-    if (
-        !name ||
-        !slug ||
-        !description ||
-        price === undefined ||
-        !image ||
-        !category ||
-        preparationTime === undefined
-    ) {
-        return sendError(res, "All fields are required", 400);
-    }
 
     const trimmedName = name.trim();
     const normalizedSlug = slug.trim().toLowerCase();
@@ -126,16 +114,6 @@ const updateMenuItem = asyncHandler(async (req, res) => {
         isVeg,
         preparationTime,
     } = req.body;
-
-    if (!name ||
-        !slug ||
-        !description ||
-        price === undefined ||
-        !image ||
-        !category ||
-        preparationTime === undefined) {
-        return sendError(res, "All fields are required", 400);
-    }
 
     const menuItem = await MenuItem.findById(req.params.id);
 
@@ -190,7 +168,7 @@ const deleteMenuItem = asyncHandler(async (req, res) => {
     const linkedSpecial = await Special.findOne({ menuItem: menuItem._id });
 
     if (linkedSpecial) {
-        return sendError(res, "Cannot delete menu item linked to an active special", 400);
+        return sendError(res, "Cannot delete menu item linked to an existing special", 400);
     }
 
     await menuItem.deleteOne();

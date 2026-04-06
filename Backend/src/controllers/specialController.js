@@ -56,13 +56,6 @@ const createSpecial = asyncHandler(async (req, res) => {
         isActive,
     } = req.body;
 
-    if (!title || !description || !menuItem ||
-        specialPrice === undefined || !startDate ||
-        !endDate || !bannerImage
-    ) {
-        return sendError(res, "All fields are required", 400);
-    }
-
     const existingMenuItem = await MenuItem.findById(menuItem);
 
     if (!existingMenuItem) {
@@ -104,18 +97,6 @@ const updateSpecial = asyncHandler(async (req, res) => {
         bannerImage,
         isActive,
     } = req.body;
-
-    if (
-        !title ||
-        !description ||
-        !menuItem ||
-        specialPrice === undefined ||
-        !startDate ||
-        !endDate ||
-        !bannerImage
-    ) {
-        return sendError(res, "All fields are required", 400);
-    }
 
     const special = await Special.findById(req.params.id);
 

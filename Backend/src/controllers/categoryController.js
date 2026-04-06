@@ -13,10 +13,6 @@ const getCategories = asyncHandler(async (req, res) => {
 const createCategory = asyncHandler(async (req, res) => {
     const { name, slug, description, isActive } = req.body;
 
-    if (!name || !slug) {
-        return sendError(res, "Name and slug are required", 400);
-    }
-
     const trimmedName = name.trim();
     const normalizedSlug = slug.trim().toLowerCase();
 
@@ -39,10 +35,6 @@ const createCategory = asyncHandler(async (req, res) => {
 //3. updateCategory
 const updateCategory = asyncHandler(async (req, res) => {
     const { name, slug, description, isActive } = req.body;
-
-    if (!name || !slug) {
-        return sendError(res, "Category name and slug are required", 400);
-    }
 
     const category = await Category.findById(req.params.id);
 

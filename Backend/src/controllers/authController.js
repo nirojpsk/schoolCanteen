@@ -4,27 +4,25 @@ import asyncHandler from '../utils/asyncHandler.js';
 import generateToken from '../utils/generateToken.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 
-
-const isNonEmptyString = (value) =>                //yesle chai check garxa ki value string ho ra empty chaina
-    typeof value === "string" && value.trim() !== "";
-
-const isNullableString = (value) =>                //yesle chai check garxa ki value string ho ra empty pani huna sakxa or null/undefined ni huna sakxa
-    value === undefined || value === null || typeof value === "string";
-
-    //getinvalidstringfields function le chai array of fields linxa jasma field name, value and validator function hunxa, ra tesma filter garxa tyo fields lai jasma value chai validator function le fail garya xa, ra map garxa tyo filtered fields lai tyo field name ko array ma convert garna ko lagi, jasle chai hami lai invalid fields ko name ko array dinxa jasma value chai valid string chaina
-const getInvalidStringFields = (fields) =>    
-    fields
-        .filter(([, value, validator]) => !validator(value)) //
-        .map(([fieldName]) => fieldName);
+const normalizeEmail = (value) => value.trim().toLowerCase();
+const normalizeOptionalText = (value) => value?.trim() || "";
+const buildUserResponse = (user) => ({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    profileImage: user.profileImage,
+    classSection: user.classSection,
+    isActive: user.isActive,
+    lastLogin: user.lastLogin,
+});
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
-        return sendError(res, "Email and password are required", 400);
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
     if (!user) {
         return sendError(res, "Invalid email or password", 401);
@@ -45,23 +43,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     generateToken(res, user._id);
 
-    sendSuccess(
-        res,
-        "Login Successful",
-        {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            profileImage: user.profileImage,
-            classSection: user.classSection,
-            isActive: user.isActive,
-            lastLogin: user.lastLogin,
-        },
-        200
-    );
-
+    sendSuccess(res, "Login Successful", buildUserResponse(user), 200);
 });
 
 //2.LogoutUser
@@ -83,28 +65,10 @@ const getMe = asyncHandler(async (req, res) => {
 
 //4.RegisterStudent
 const registerStudent = asyncHandler(async (req, res) => {
-
     const { name, email, password, phone, profileImage, classSection } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
-        return sendError(res, "Name, Email and Password are required", 400);
-    }
-
-    const invalidFields = getInvalidStringFields([
-        ["phone", phone, isNullableString],
-        ["profileImage", profileImage, isNullableString],
-        ["classSection", classSection, isNullableString],
-    ]);
-
-    if (invalidFields.length > 0) {
-        return sendError(
-            res,
-            `${invalidFields.join(", ")} must be string values`,
-            400
-        );
-    }
-
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
         return sendError(res, "User with this email already exists", 400);
@@ -112,41 +76,24 @@ const registerStudent = asyncHandler(async (req, res) => {
 
     const user = await User.create({
         name: name.trim(),
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password,
-        phone: phone?.trim() || "",
-        profileImage: profileImage?.trim() || "",
-        classSection: classSection?.trim() || "",
+        phone: normalizeOptionalText(phone),
+        profileImage: normalizeOptionalText(profileImage),
+        classSection: normalizeOptionalText(classSection),
         role: "student",
     });
+
     user.lastLogin = new Date();
     await user.save();
+
     generateToken(res, user._id);
-    sendSuccess(
-        res,
-        "Student registered successfully",
-        {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            profileImage: user.profileImage,
-            classSection: user.classSection,
-            isActive: user.isActive,
-            lastLogin: user.lastLogin,
-        },
-        201
-    );
+    sendSuccess(res, "Student registered successfully", buildUserResponse(user), 201);
 });
 
 //5.ChangePassword [logged-in user]
 const changePassword = asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-
-    if (!isNonEmptyString(currentPassword) || !isNonEmptyString(newPassword)) {
-        return sendError(res, "Please fill all the required fields", 400);
-    }
 
     const user = await User.findById(req.user._id).select("+password");
 
@@ -169,6 +116,7 @@ const changePassword = asyncHandler(async (req, res) => {
             400
         );
     }
+
     user.password = newPassword;
     await user.save();
     sendSuccess(res, "Password changed successfully", null, 200);
@@ -179,24 +127,6 @@ const changePassword = asyncHandler(async (req, res) => {
 const updateProfile = asyncHandler(async (req, res) => {
     const { name, phone, profileImage, classSection } = req.body;
 
-    if (name !== undefined && !isNonEmptyString(name)) {
-        return sendError(res, "Name must be a non-empty string", 400);
-    }
-
-    const invalidFields = getInvalidStringFields([
-        ["phone", phone, isNullableString],
-        ["profileImage", profileImage, isNullableString],
-        ["classSection", classSection, isNullableString],
-    ]);
-
-    if (invalidFields.length > 0) {
-        return sendError(
-            res,
-            `${invalidFields.join(", ")} must be string values`,
-            400
-        );
-    }
-
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -204,64 +134,22 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 
     if (name !== undefined) user.name = name.trim();
-    if (phone !== undefined) user.phone = phone?.trim() || "";
-    if (profileImage !== undefined) user.profileImage = profileImage?.trim() || "";
-    if (classSection !== undefined) user.classSection = classSection?.trim() || "";
+    if (phone !== undefined) user.phone = normalizeOptionalText(phone);
+    if (profileImage !== undefined) user.profileImage = normalizeOptionalText(profileImage);
+    if (classSection !== undefined) user.classSection = normalizeOptionalText(classSection);
 
     const updatedUser = await user.save();
 
-    sendSuccess(
-        res,
-        "Profile updated successfully",
-        {
-            _id: updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            role: updatedUser.role,
-            phone: updatedUser.phone,
-            profileImage: updatedUser.profileImage,
-            classSection: updatedUser.classSection,
-            isActive: updatedUser.isActive,
-            lastLogin: updatedUser.lastLogin,
-        },
-        200
-    );
+    sendSuccess(res, "Profile updated successfully", buildUserResponse(updatedUser), 200);
 });
 
 //7.createStafforAdmin [admin]
 const createStaffOrAdmin = asyncHandler(async (req, res) => {
     const { name, email, password, role, phone, profileImage, classSection } = req.body;
-
-    if (
-        !isNonEmptyString(name) ||
-        !isNonEmptyString(email) ||
-        !isNonEmptyString(password) ||
-        !isNonEmptyString(role)
-    ) {
-        return sendError(res, "Name, email, password, and role are required", 400);
-    }
-
-    const invalidFields = getInvalidStringFields([
-        ["phone", phone, isNullableString],
-        ["profileImage", profileImage, isNullableString],
-        ["classSection", classSection, isNullableString],
-    ]);
-
-    if (invalidFields.length > 0) {
-        return sendError(
-            res,
-            `${invalidFields.join(", ")} must be string values`,
-            400
-        );
-    }
-
+    const normalizedEmail = normalizeEmail(email);
     const normalizedRole = role.trim().toLowerCase();
 
-    if (!["staff", "admin"].includes(normalizedRole)) {
-        return sendError(res, "Only staff or admin roles can be created here", 400);
-    }
-
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
         return sendError(res, "User with this email already exists", 400);
@@ -269,28 +157,18 @@ const createStaffOrAdmin = asyncHandler(async (req, res) => {
 
     const user = await User.create({
         name: name.trim(),
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password,
         role: normalizedRole,
-        phone: phone?.trim() || "",
-        profileImage: profileImage?.trim() || "",
-        classSection: classSection?.trim() || "",
+        phone: normalizeOptionalText(phone),
+        profileImage: normalizeOptionalText(profileImage),
+        classSection: normalizeOptionalText(classSection),
     });
 
     sendSuccess(
         res,
         `${normalizedRole} created successfully`,
-        {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            profileImage: user.profileImage,
-            classSection: user.classSection,
-            isActive: user.isActive,
-            lastLogin: user.lastLogin,
-        },
+        buildUserResponse(user),
         201
     );
 });
@@ -300,12 +178,15 @@ const createStaffOrAdmin = asyncHandler(async (req, res) => {
 const getAllUsers = asyncHandler(async (req, res) => {
     const { role, isActive } = req.query;
     const filter = {}; //to make it start with no restrictions
-    if (role) {
-        filter.role = role;
+
+    if (typeof role === "string" && role.trim()) {
+        filter.role = role.trim().toLowerCase();
     }
+
     if (isActive !== undefined) {
         filter.isActive = isActive === "true";
     }
+
     const users = await User.find(filter).sort({ createdAt: -1 });
     sendSuccess(res, "Users fetched successfully", users, 200);
 });
@@ -325,12 +206,7 @@ const getUserById = asyncHandler(async (req, res) => {
 //10.updateUserStatus [admin]
 
 const updateUserStatus = asyncHandler(async (req, res) => {
-
     const { isActive } = req.body;
-
-    if (typeof isActive !== "boolean") {
-        return sendError(res, "isActive must be a boolean value", 400);
-    }
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -340,23 +216,14 @@ const updateUserStatus = asyncHandler(async (req, res) => {
     if (req.user._id.toString() === user._id.toString() && isActive === false) {
         return sendError(res, "You cannot deactivate your own account", 400);
     }
+
     user.isActive = isActive;
     const updatedUser = await user.save();
 
     sendSuccess(
         res,
         `User has been ${isActive ? "Activated" : "deactivated"} successfully`,
-        {
-            _id: updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            role: updatedUser.role,
-            phone: updatedUser.phone,
-            profileImage: updatedUser.profileImage,
-            classSection: updatedUser.classSection,
-            isActive: updatedUser.isActive,
-            lastLogin: updatedUser.lastLogin,
-        },
+        buildUserResponse(updatedUser),
         200
     );
 });
