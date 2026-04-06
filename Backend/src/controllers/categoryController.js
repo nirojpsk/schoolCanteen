@@ -5,7 +5,7 @@ import MenuItem from "../models/MenuItem.js";
 //1. getCategories
 
 const getCategories = asyncHandler(async (req, res) => {
-    const categories = (await Category.find({ isActive: true })).toSorted({ name: 1 });
+    const categories = await Category.find({ isActive: true }).sort({ name: 1 });
     sendSuccess(res, "Categories fetched successfully", categories, 200);
 });
 //2. createCategory

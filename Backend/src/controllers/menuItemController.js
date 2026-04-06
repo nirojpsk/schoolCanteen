@@ -14,7 +14,7 @@ const getMenuItems = asyncHandler(async (req, res) => {
     if (category) {
         const foundCategory = await Category.findOne({ slug: category.trim().toLowerCase() });
 
-        if (foundCategory) {
+        if (!foundCategory) {
             return sendSuccess(res, "Menu items Fetched successfully", [], 200);
         }
         filter.category = foundCategory._id; // yesle filter object ma category field set garne
@@ -107,7 +107,7 @@ const createMenuItem = asyncHandler(async (req, res) => {
         isVeg: typeof isVeg === "boolean" ? isVeg : true,
         preparationTime,
     });
-    const populatedMenuItem = await menuItem.findById(menuItem._id).populate("category", "name slug");
+    const populatedMenuItem = await MenuItem.findById(menuItem._id).populate("category", "name slug");
     sendSuccess(res, "Menu item created successfully", populatedMenuItem, 201);
 
 });
@@ -137,7 +137,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
         return sendError(res, "All fields are required", 400);
     }
 
-    const menuItem = await MenuItem.findById(req.parms.id);
+    const menuItem = await MenuItem.findById(req.params.id);
 
     if (!menuItem) {
         return sendError(res, "Menu item not found", 404);

@@ -6,15 +6,14 @@ import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
-import menuItemRoutes from './routes/menuItemRoutes.js';
+import menuItemRoutes from './routes/menuItemsRoutes.js';
 import specialRoutes from './routes/specialRoutes.js';
-// import preorderRoutes from './routes/preorderRoutes.js';
+import preorderRoutes from './routes/preorderRoutes.js';
 // import dashboardRoutes from './routes/dashboardRoutes.js';
 
 
 
 import notFoundMiddleware from './middleware/notFoundMiddleware.js';
-import errorHandlerMiddleware from './middleware/errorMiddleware.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -64,7 +63,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/menu-items", menuItemRoutes);
 app.use("/api/specials", specialRoutes);
-// app.use("/api/preorders", preorderRoutes);
+app.use("/api/preorders", preorderRoutes);
 // app.use("/api/dashboard", dashboardRoutes);
 
 //Error Handling Middleware

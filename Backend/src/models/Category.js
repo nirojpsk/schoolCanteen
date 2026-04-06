@@ -15,7 +15,7 @@ const categorySchema = new mongoose.Schema({
         unique: true,
         trim: true,
         lowercase: true,
-        match: [/^[a-z0-9] + (?:-[a-z0-9]+)*$/, "slug must contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen"]
+        match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen"]
     },
     description: {
         type: String,

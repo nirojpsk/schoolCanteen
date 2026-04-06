@@ -13,7 +13,7 @@ const router = express.Router();
 
 //Public Routes
 
-router.get("/", getsecials);
+router.get("/", getSpecials);
 router.get("/active", getActiveSpecials);
 
 //Admin Routes

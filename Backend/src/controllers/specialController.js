@@ -17,7 +17,7 @@ const getSpecials = asyncHandler(async (req, res) => {
         })
         .sort({ createdAt: -1 });
 
-    sendSuccess(res, "Specials fetched successfully", 200, specials);
+    sendSuccess(res, "Specials fetched successfully", specials, 200);
 });
 
 //2. getActiveSpecials
@@ -39,7 +39,7 @@ const getActiveSpecials = asyncHandler(async (req, res) => {
             },
         }).sort({ createdAt: -1 });
 
-    sendSuccess(res, "Active specials fetched successfully", 200, activeSpecials);
+    sendSuccess(res, "Active specials fetched successfully", activeSpecials, 200);
 });
 
 //3. createSpecial
