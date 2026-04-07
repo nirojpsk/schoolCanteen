@@ -2,16 +2,18 @@ function SectionTitle({ badge, title, subtitle, center = false }) {
     return (
         <div className={center ? "text-center" : "text-left"}>
             {badge && (
-                <span className="inline-block rounded-full bg-green-100 px-4 py-1 text-sm font-medium text-green-700">
+                <span className="section-badge">
                     {badge}
                 </span>
             )}
-            <h2 className="mt-4 text-3xl font-bold text-slate-900 md:text-4xl">
+            <h2 className="mt-5 text-4xl font-extrabold leading-[1.04] text-slate-950 md:text-5xl">
                 {title}
             </h2>
 
             {subtitle && (
-                <p className="mt-3 max-w-2xl text-lg leading-8 text-slate-600">
+                <p
+                    className={`mt-4 text-base leading-8 text-slate-600 md:text-[1.05rem] ${center ? "mx-auto max-w-2xl" : "max-w-2xl"}`}
+                >
                     {subtitle}
                 </p>
             )}

@@ -1,148 +1,140 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
 import MenuItemForm from "../../components/admin/MenuItemForm";
 import MenuItemsTable from "../../components/admin/MenuItemsTable";
+import AdminHeader from "../../components/admin/AdminHeader";
+import LoadingBlock from "../../components/common/LoadingBlock";
+import { useGetCategoriesQuery } from "../../services/categoryApiSlice";
+import {
+  useCreateMenuItemMutation,
+  useDeleteMenuItemMutation,
+  useGetMenuItemsQuery,
+  useUpdateMenuItemMutation,
+} from "../../services/menuApiSlice";
+import { getApiErrorMessage } from "../../utils/formatters";
 
-const categories = [
-  { id: 1, name: "Snacks" },
-  { id: 2, name: "Drinks" },
-  { id: 3, name: "Lunch" },
-  { id: 4, name: "Combo" },
-];
-
-const initialItems = [
-  {
-    id: 1,
-    name: "Chicken Momo",
-    slug: "chicken-momo",
-    description: "Steamed momo served hot and fresh.",
-    price: 120,
-    image:
-      "https://images.unsplash.com/photo-1628294895950-9805252327bc?auto=format&fit=crop&w=400&q=80",
-    category: "Snacks",
-    isAvailable: true,
-    isFeatured: true,
-    isVeg: false,
-    preparationTime: 12,
-  },
-  {
-    id: 2,
-    name: "Veg Chowmein",
-    slug: "veg-chowmein",
-    description: "Freshly cooked noodles with vegetables.",
-    price: 90,
-    image:
-      "https://images.unsplash.com/photo-1617622141675-d3005b9067c5?auto=format&fit=crop&w=400&q=80",
-    category: "Lunch",
-    isAvailable: true,
-    isFeatured: false,
-    isVeg: true,
-    preparationTime: 10,
-  },
-  {
-    id: 3,
-    name: "Fresh Juice",
-    slug: "fresh-juice",
-    description: "Refreshing juice for school breaks.",
-    price: 70,
-    image:
-      "https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?auto=format&fit=crop&w=400&q=80",
-    category: "Drinks",
-    isAvailable: false,
-    isFeatured: false,
-    isVeg: true,
-    preparationTime: 5,
-  },
-];
+const toMenuPayload = (item, overrides = {}) => ({
+  name: item.name,
+  slug: item.slug,
+  description: item.description,
+  price: Number(item.price),
+  image: item.image,
+  category: item.category?._id || item.category,
+  isAvailable: item.isAvailable,
+  isFeatured: item.isFeatured,
+  isVeg: item.isVeg,
+  preparationTime: Number(item.preparationTime),
+  ...overrides,
+});
 
 export default function MenuItemsPage() {
-  const [items, setItems] = useState(initialItems);
+  const { data: categoriesResponse, isLoading: isLoadingCategories } =
+    useGetCategoriesQuery();
+  const { data: itemsResponse, isLoading: isLoadingItems } = useGetMenuItemsQuery();
+  const [createMenuItem, { isLoading: isCreating }] = useCreateMenuItemMutation();
+  const [updateMenuItem, { isLoading: isUpdating }] = useUpdateMenuItemMutation();
+  const [deleteMenuItem] = useDeleteMenuItemMutation();
   const [editingItem, setEditingItem] = useState(null);
 
-  const handleAddOrUpdateItem = (formData) => {
-    if (editingItem) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingItem.id ? { ...item, ...formData } : item
-        )
-      );
-      setEditingItem(null);
-      return;
-    }
+  const categories = categoriesResponse?.data ?? [];
+  const items = itemsResponse?.data ?? [];
 
-    const newItem = {
-      id: Date.now(),
-      ...formData,
-    };
+  const handleAddOrUpdateItem = async (formData) => {
+    try {
+      if (editingItem) {
+        const response = await updateMenuItem({
+          id: editingItem._id,
+          ...formData,
+        }).unwrap();
+        toast.success(response?.message || "Menu item updated.");
+        setEditingItem(null);
+        return;
+      }
 
-    setItems((prev) => [newItem, ...prev]);
-  };
-
-  const handleEditItem = (item) => {
-    setEditingItem(item);
-  };
-
-  const handleDeleteItem = (id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-
-    if (editingItem?.id === id) {
-      setEditingItem(null);
+      const response = await createMenuItem({
+        ...formData,
+        price: Number(formData.price),
+        preparationTime: Number(formData.preparationTime),
+      }).unwrap();
+      toast.success(response?.message || "Menu item created.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not save menu item."));
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingItem(null);
+  const handleDeleteItem = async (item) => {
+    const isConfirmed = window.confirm(`Delete "${item.name}" from the menu?`);
+
+    if (!isConfirmed) return;
+
+    try {
+      const response = await deleteMenuItem(item._id).unwrap();
+      toast.success(response?.message || "Menu item deleted.");
+
+      if (editingItem?._id === item._id) {
+        setEditingItem(null);
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not delete menu item."));
+    }
   };
 
-  const handleToggleAvailability = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, isAvailable: !item.isAvailable }
-          : item
-      )
-    );
+  const handleToggleAvailability = async (item) => {
+    try {
+      const response = await updateMenuItem({
+        id: item._id,
+        ...toMenuPayload(item, { isAvailable: !item.isAvailable }),
+      }).unwrap();
+      toast.success(response?.message || "Availability updated.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update availability."));
+    }
   };
 
-  const handleToggleFeatured = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, isFeatured: !item.isFeatured }
-          : item
-      )
-    );
+  const handleToggleFeatured = async (item) => {
+    try {
+      const response = await updateMenuItem({
+        id: item._id,
+        ...toMenuPayload(item, { isFeatured: !item.isFeatured }),
+      }).unwrap();
+      toast.success(response?.message || "Featured state updated.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update featured state."));
+    }
   };
 
   return (
     <section className="space-y-8">
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Manage Menu Items</h1>
-        <p className="mt-2 text-slate-600">
-          Create, edit, and control the food and drink items shown on the canteen website.
-        </p>
-      </div>
+      <AdminHeader
+        title="Manage Menu Items"
+        description="Control the live menu cards, pricing, availability, and featured highlights shown on the public site."
+      />
 
-      <div className="grid gap-8 xl:grid-cols-5">
-        <div className="xl:col-span-2">
-          <MenuItemForm
-            key={editingItem?.id ?? "new-menu-item"}
-            onSubmit={handleAddOrUpdateItem}
-            editingItem={editingItem}
-            onCancelEdit={handleCancelEdit}
-            categories={categories}
-          />
-        </div>
+      {isLoadingCategories || isLoadingItems ? (
+        <LoadingBlock label="Loading menu management data..." />
+      ) : (
+        <div className="grid gap-8 xl:grid-cols-5">
+          <div className="xl:col-span-2">
+            <MenuItemForm
+              onSubmit={handleAddOrUpdateItem}
+              editingItem={editingItem}
+              onCancelEdit={() => setEditingItem(null)}
+              categories={categories}
+              isSubmitting={isCreating || isUpdating}
+            />
+          </div>
 
-        <div className="xl:col-span-3">
-          <MenuItemsTable
-            items={items}
-            onEdit={handleEditItem}
-            onDelete={handleDeleteItem}
-            onToggleAvailability={handleToggleAvailability}
-            onToggleFeatured={handleToggleFeatured}
-          />
+          <div className="xl:col-span-3">
+            <MenuItemsTable
+              items={items}
+              onEdit={setEditingItem}
+              onDelete={handleDeleteItem}
+              onToggleAvailability={handleToggleAvailability}
+              onToggleFeatured={handleToggleFeatured}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

@@ -1,110 +1,93 @@
-const statusStyles = {
-  pending: "bg-yellow-100 text-yellow-700",
-  preparing: "bg-sky-100 text-sky-700",
-  ready: "bg-green-100 text-green-700",
-  completed: "bg-slate-200 text-slate-700",
-  cancelled: "bg-red-100 text-red-700",
-};
+import { HiChevronRight, HiClock } from "react-icons/hi";
+import StatusBadge from "../../components/common/StatusBadge";
+import { formatCurrency } from "../../utils/formatters";
 
 export default function OrdersTable({
   orders,
   onSelectOrder,
-  onUpdateStatus,
-  selectedOrder,
+  selectedOrderId,
 }) {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
+    <div className="admin-card p-6 md:p-7">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Orders List</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          View preorder requests and update their status.
+        <h2 className="text-3xl font-extrabold text-slate-950">Order Queue</h2>
+        <p className="mt-2 text-sm leading-7 text-slate-600">
+          Select a preorder to review its details and update the workflow status.
         </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-250 text-left">
-          <thead>
-            <tr className="border-b border-slate-200 text-sm text-slate-500">
-              <th className="pb-3 font-medium">Order ID</th>
-              <th className="pb-3 font-medium">Student</th>
-              <th className="pb-3 font-medium">Class</th>
-              <th className="pb-3 font-medium">Pickup Time</th>
-              <th className="pb-3 font-medium">Total</th>
-              <th className="pb-3 font-medium">Status</th>
-              <th className="pb-3 font-medium">Actions</th>
-            </tr>
-          </thead>
+      <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-white">
+        <div className="hidden grid-cols-[1.3fr_0.85fr_0.85fr_0.75fr_auto] gap-4 border-b border-slate-100 px-5 py-4 text-xs font-extrabold uppercase tracking-[0.18em] text-slate-400 md:grid">
+          <span>Student</span>
+          <span>Pickup</span>
+          <span>Total</span>
+          <span>Status</span>
+          <span>Action</span>
+        </div>
 
-          <tbody>
-            {orders.map((order) => (
-              <tr
-                key={order.id}
-                className={`border-b border-slate-100 text-sm text-slate-700 ${
-                  selectedOrder?.id === order.id ? "bg-slate-50" : ""
-                }`}
-              >
-                <td className="py-4 font-semibold text-slate-900">
-                  {order.orderId}
-                </td>
-                <td className="py-4">{order.studentName}</td>
-                <td className="py-4">{order.classSection}</td>
-                <td className="py-4">{order.pickupTime}</td>
-                <td className="py-4 font-semibold">Rs. {order.totalAmount}</td>
-                <td className="py-4">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      statusStyles[order.status]
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </td>
-                <td className="py-4">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => onSelectOrder(order)}
-                      className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
-                    >
-                      View
-                    </button>
+        {orders.length ? (
+          <div className="divide-y divide-slate-100">
+            {orders.map((order) => {
+              const initials = order.studentName
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase())
+                .join("");
 
-                    <button
-                      onClick={() => onUpdateStatus(order.id, "preparing")}
-                      className="rounded-lg bg-sky-100 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-200"
-                    >
-                      Preparing
-                    </button>
-
-                    <button
-                      onClick={() => onUpdateStatus(order.id, "ready")}
-                      className="rounded-lg bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-200"
-                    >
-                      Ready
-                    </button>
-
-                    <button
-                      onClick={() => onUpdateStatus(order.id, "completed")}
-                      className="rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-300"
-                    >
-                      Completed
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-
-            {orders.length === 0 && (
-              <tr>
-                <td
-                  colSpan="7"
-                  className="py-8 text-center text-sm text-slate-500"
+              return (
+                <button
+                  key={order._id}
+                  type="button"
+                  onClick={() => onSelectOrder(order)}
+                  className={`grid w-full gap-4 px-5 py-5 text-left transition md:grid-cols-[1.3fr_0.85fr_0.85fr_0.75fr_auto] md:items-center ${
+                    selectedOrderId === order._id
+                      ? "bg-emerald-50/70"
+                      : "bg-white hover:bg-slate-50"
+                  }`}
                 >
-                  No orders found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dff3e8] text-sm font-extrabold text-emerald-900">
+                      {initials || "ST"}
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-slate-950">{order.studentName}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        {order.classSection}
+                      </p>
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        #{order._id.slice(-6).toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                    <HiClock className="text-base text-slate-400" />
+                    <span>{order.pickupTime}</span>
+                  </div>
+
+                  <div className="text-base font-extrabold text-slate-950">
+                    {formatCurrency(order.totalAmount)}
+                  </div>
+
+                  <div>
+                    <StatusBadge value={order.status} tone={order.status} />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-500">
+                      <HiChevronRight className="text-xl" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-5 py-10 text-center text-sm text-slate-500">
+            No orders match the current filters.
+          </div>
+        )}
       </div>
     </div>
   );

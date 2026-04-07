@@ -1,119 +1,126 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
 import SpecialForm from "../../components/admin/SpecialForm";
 import SpecialsTable from "../../components/admin/SpecialsTable";
+import AdminHeader from "../../components/admin/AdminHeader";
+import LoadingBlock from "../../components/common/LoadingBlock";
+import { useGetMenuItemsQuery } from "../../services/menuApiSlice";
+import {
+  useCreateSpecialMutation,
+  useDeleteSpecialMutation,
+  useGetSpecialsQuery,
+  useUpdateSpecialMutation,
+} from "../../services/specialApiSlice";
+import { getApiErrorMessage } from "../../utils/formatters";
 
-const menuItems = [
-  { id: 1, name: "Chicken Momo" },
-  { id: 2, name: "Veg Chowmein" },
-  { id: 3, name: "Fresh Juice" },
-  { id: 4, name: "Combo Lunch Set" },
-];
-
-const initialSpecials = [
-  {
-    id: 1,
-    title: "Student Combo Set",
-    description: "A tasty combo with snack and drink for students.",
-    menuItem: "Combo Lunch Set",
-    specialPrice: 120,
-    startDate: "2026-04-04",
-    endDate: "2026-04-10",
-    bannerImage:
-      "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=400&q=80",
-    isActive: true,
-  },
-  {
-    id: 2,
-    title: "Fresh Juice Deal",
-    description: "Refreshing juice offer for school break.",
-    menuItem: "Fresh Juice",
-    specialPrice: 60,
-    startDate: "2026-04-05",
-    endDate: "2026-04-08",
-    bannerImage:
-      "https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?auto=format&fit=crop&w=400&q=80",
-    isActive: false,
-  },
-];
+const toSpecialPayload = (special, overrides = {}) => ({
+  title: special.title,
+  description: special.description,
+  menuItem: special.menuItem?._id || special.menuItem,
+  specialPrice: Number(special.specialPrice),
+  startDate: special.startDate?.slice(0, 10) || special.startDate,
+  endDate: special.endDate?.slice(0, 10) || special.endDate,
+  bannerImage: special.bannerImage,
+  isActive: special.isActive,
+  ...overrides,
+});
 
 export default function SpecialsManagePage() {
-  const [specials, setSpecials] = useState(initialSpecials);
+  const { data: specialsResponse, isLoading: isLoadingSpecials } =
+    useGetSpecialsQuery();
+  const { data: menuResponse, isLoading: isLoadingMenuItems } =
+    useGetMenuItemsQuery();
+  const [createSpecial, { isLoading: isCreating }] = useCreateSpecialMutation();
+  const [updateSpecial, { isLoading: isUpdating }] = useUpdateSpecialMutation();
+  const [deleteSpecial] = useDeleteSpecialMutation();
   const [editingSpecial, setEditingSpecial] = useState(null);
 
-  const handleAddOrUpdateSpecial = (formData) => {
-    if (editingSpecial) {
-      setSpecials((prev) =>
-        prev.map((special) =>
-          special.id === editingSpecial.id ? { ...special, ...formData } : special
-        )
-      );
-      setEditingSpecial(null);
-      return;
-    }
+  const specials = specialsResponse?.data ?? [];
+  const menuItems = menuResponse?.data ?? [];
 
-    const newSpecial = {
-      id: Date.now(),
-      ...formData,
-    };
+  const handleAddOrUpdateSpecial = async (formData) => {
+    try {
+      if (editingSpecial) {
+        const response = await updateSpecial({
+          id: editingSpecial._id,
+          ...formData,
+          specialPrice: Number(formData.specialPrice),
+        }).unwrap();
+        toast.success(response?.message || "Special updated.");
+        setEditingSpecial(null);
+        return;
+      }
 
-    setSpecials((prev) => [newSpecial, ...prev]);
-  };
-
-  const handleEditSpecial = (special) => {
-    setEditingSpecial(special);
-  };
-
-  const handleDeleteSpecial = (id) => {
-    setSpecials((prev) => prev.filter((special) => special.id !== id));
-
-    if (editingSpecial?.id === id) {
-      setEditingSpecial(null);
+      const response = await createSpecial({
+        ...formData,
+        specialPrice: Number(formData.specialPrice),
+      }).unwrap();
+      toast.success(response?.message || "Special created.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not save special."));
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingSpecial(null);
+  const handleDeleteSpecial = async (special) => {
+    const isConfirmed = window.confirm(`Delete "${special.title}"?`);
+
+    if (!isConfirmed) return;
+
+    try {
+      const response = await deleteSpecial(special._id).unwrap();
+      toast.success(response?.message || "Special deleted.");
+
+      if (editingSpecial?._id === special._id) {
+        setEditingSpecial(null);
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not delete special."));
+    }
   };
 
-  const handleToggleActive = (id) => {
-    setSpecials((prev) =>
-      prev.map((special) =>
-        special.id === id
-          ? { ...special, isActive: !special.isActive }
-          : special
-      )
-    );
+  const handleToggleActive = async (special) => {
+    try {
+      const response = await updateSpecial({
+        id: special._id,
+        ...toSpecialPayload(special, { isActive: !special.isActive }),
+      }).unwrap();
+      toast.success(response?.message || "Special status updated.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update special status."));
+    }
   };
 
   return (
     <section className="space-y-8">
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Manage Specials</h1>
-        <p className="mt-2 text-slate-600">
-          Create, edit, and control special offers shown on the canteen website.
-        </p>
-      </div>
+      <AdminHeader
+        title="Manage Specials"
+        description="Run timely promotions that automatically surface on the public homepage and specials page."
+      />
 
-      <div className="grid gap-8 xl:grid-cols-5">
-        <div className="xl:col-span-2">
-          <SpecialForm
-            key={editingSpecial?.id ?? "new-special"}
-            onSubmit={handleAddOrUpdateSpecial}
-            editingSpecial={editingSpecial}
-            onCancelEdit={handleCancelEdit}
-            menuItems={menuItems}
-          />
-        </div>
+      {isLoadingSpecials || isLoadingMenuItems ? (
+        <LoadingBlock label="Loading special management data..." />
+      ) : (
+        <div className="grid gap-8 xl:grid-cols-5">
+          <div className="xl:col-span-2">
+            <SpecialForm
+              onSubmit={handleAddOrUpdateSpecial}
+              editingSpecial={editingSpecial}
+              onCancelEdit={() => setEditingSpecial(null)}
+              menuItems={menuItems}
+              isSubmitting={isCreating || isUpdating}
+            />
+          </div>
 
-        <div className="xl:col-span-3">
-          <SpecialsTable
-            specials={specials}
-            onEdit={handleEditSpecial}
-            onDelete={handleDeleteSpecial}
-            onToggleActive={handleToggleActive}
-          />
+          <div className="xl:col-span-3">
+            <SpecialsTable
+              specials={specials}
+              onEdit={setEditingSpecial}
+              onDelete={handleDeleteSpecial}
+              onToggleActive={handleToggleActive}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
